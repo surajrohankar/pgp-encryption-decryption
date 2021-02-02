@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:crypto="http://www.mulesoft.org/schema/mule/crypto" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/crypto http://www.mulesoft.org/schema/mule/crypto/current/mule-crypto.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+	<crypto:pgp-config name="Crypto_Pgp" doc:name="Crypto Pgp" doc:id="2a20e150-27f9-4cfa-9e4e-2281e907bd07" publicKeyring="F:\test_0x06DACDF7_public.gpg" privateKeyring="F:\test_0x06DACDF7_SECRET.gpg">
+		<crypto:pgp-key-infos >
+			<crypto:pgp-asymmetric-key-info keyId="demo" fingerprint="ACD57CDD863855FE79501B895***************" passphrase="mule world"/>
+		</crypto:pgp-key-infos>
+	</crypto:pgp-config>
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="e7c6dbc5-b20a-4f32-8fa5-9a10c9e2b041" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<file:config name="File_Config" doc:name="File Config" doc:id="4194623b-588e-4a10-8b43-7ad86e6f37e7" >
+		<file:connection workingDir="F:\pgp" />
+	</file:config>
+	<http:listener-config name="HTTP_Listener_config1" doc:name="HTTP Listener config" doc:id="3695794f-f80e-443e-8378-f0c2f16a7284" >
+		<http:listener-connection host="0.0.0.0" port="8082" />
+	</http:listener-config>
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="68924199-5e49-4309-87fd-480051c3a063" >
+		<http:request-connection host="localhost" port="8082" />
+	</http:request-config>
+	<flow name="data-encryptionFlow" doc:id="04178281-3c3a-4fbe-9334-08478d69f51e" >
+		<http:listener doc:name="8081/encrypt" doc:id="ea61bb32-9b2a-466f-82fb-93b65bf40b96" config-ref="HTTP_Listener_config" path="/encrypt"/>
+		<logger level="INFO" doc:name="[INFO]Payload" doc:id="0fbd41fe-d556-490c-b275-c7915ef1d972" message="#[payload]"/>
+		<crypto:pgp-encrypt doc:name="Pgp encrypt" doc:id="6f7d7d04-4862-4012-b2b3-544b12f99bb1" config-ref="Crypto_Pgp" algorithm="BLOWFISH" keyId="demo" target="encryptedData"/>
+		<file:write doc:id="8e0a1270-75fc-4c40-b19d-1003661b704b" config-ref="File_Config" path="F:\pgp\encryption.txt" doc:name="Write to encryption.txt">
+			<file:content ><![CDATA[#[vars.encryptedData]]]></file:content>
+		</file:write>
+		<logger level="INFO" doc:name="[INFO]Data Encrypted" doc:id="1156ce23-4129-4c66-952a-2a072dd32e78" message="data encrypted"/>
+		<http:request method="POST" doc:name="Request to 8082/decrypt" doc:id="9e02c0f6-fb84-426a-8d94-6235c6e68789" config-ref="HTTP_Request_configuration" path="/decrypt">
+			<http:body ><![CDATA[#[vars.encryptedData]]]></http:body>
+		</http:request>
+	</flow>
+	<flow name="data-decryptionFlow" doc:id="12a67bbc-2bfa-4762-8b32-37ff94318263" >
+		<http:listener doc:name="8082/decrypt" doc:id="ad369d4a-c759-4400-8e80-c941d8d74d4c" config-ref="HTTP_Listener_config1" path="/decrypt" />
+		<logger level="INFO" doc:name="[INFO]Payload" doc:id="41380e9f-cfa2-41c1-80e1-6646ceb7d728" message="#[payload]" />
+		<crypto:pgp-decrypt doc:name="Pgp decrypt" doc:id="a6f48c7e-496f-46c0-9952-88280bf124b7" config-ref="Crypto_Pgp"/>
+		<file:write doc:name="Write to decryption.txt" doc:id="38159558-c93b-4c34-931c-85ec257d05b5" config-ref="File_Config" path="F:\pgp\decryption.txt" />
+		<logger level="INFO" doc:name="[INFO]Data Decrypted" doc:id="91b86b3e-af9a-4423-b2fb-e89df61c44bb" message="data decrypted" />
+	</flow>
+</mule>
